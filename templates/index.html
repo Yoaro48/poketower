@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokemon Pyramid Swap - Ranked</title>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #353557;
+            --card-bg: #f1faee;
+            --accent: #e63946;
+            --text-main: #f1faee;
+            --text-dark: #1a1a2e;
+            --cyan: #a8dadc;
+        }
+
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: var(--bg-color); 
+            color: var(--text-main); 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding: 20px; margin: 0;
+            counter-reset: rank; 
+        }
+
+        /* --- Barra Superior --- */
+        .top-bar {
+            width: 100%; max-width: 1200px;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 40px; box-sizing: border-box;
+        }
+
+        .streak-container {
+            display: flex; align-items: center; gap: 10px;
+            font-weight: bold; color: #ffcb05; font-size: 1.2rem;
+        }
+
+        .pokeball-streak {
+            width: 35px; height: 35px;
+            background: linear-gradient(to bottom, var(--accent) 50%, white 50%);
+            border-radius: 50%; border: 2px solid #000; position: relative;
+        }
+        .pokeball-streak::after {
+            content: ''; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); width: 10px; height: 10px;
+            background: white; border: 2px solid #000; border-radius: 50%;
+        }
+
+        .auth-section { display: flex; align-items: center; gap: 15px; }
+
+        .auth-btn {
+            padding: 6px 16px; font-size: 0.85rem; border-radius: 20px;
+            border: 1.5px solid var(--accent); background: transparent;
+            color: white; cursor: pointer; transition: 0.3s;
+        }
+        .auth-btn.primary { background: var(--accent); }
+        .auth-btn:hover { background: rgba(230, 57, 70, 0.2); }
+
+        /* --- UI de Estado --- */
+        #timer { font-size: 3rem; font-family: monospace; color: var(--accent); margin: 10px 0; }
+        #intentos-ui { font-size: 1.4rem; margin-bottom: 20px; }
+        .heart { color: var(--accent); margin: 0 2px; }
+
+        /* --- Pirámide (Tamaño Original) --- */
+        h1 { margin: 5px 0; text-shadow: 2px 2px var(--accent); font-size: 2.5rem; }
+        #categoria-texto { color: var(--cyan); font-size: 1.3em; margin-bottom: 30px; text-transform: uppercase; }
+
+        .pyramid { display: flex; flex-direction: column; align-items: center; gap: 15px; }
+        .row { display: flex; justify-content: center; gap: 15px; min-height: 130px; }
+
+        /* Pokemon cards */
+        .pokemon-card {
+            background: var(--card-bg); color: var(--text-dark);
+            width: 100px; height: 130px; border-radius: 12px; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: grab; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+        }
+
+        .pokemon-card::after {
+            counter-increment: rank; content: counter(rank);
+            position: absolute; top: -8px; right: -8px;
+            background: var(--accent); color: white;
+            width: 24px; height: 24px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem; font-weight: bold; border: 2px solid var(--card-bg);
+        }
+
+        .pokemon-card img { width: 75px; height: 75px; pointer-events: none; }
+        .pokemon-card span { font-size: 0.8rem; font-weight: bold; text-transform: capitalize; }
+        .pokemon-card .info-extra { font-size: 0.7rem; color: var(--accent); font-weight: bold; margin-top: 2px; }
+
+        .card-correct {
+            border: 3px solid #2ecc71 !important;
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.6) !important;
+            transform: scale(1.05);
+            transition: all 0.3s ease;
+        }
+
+    /* Animación opcional para las incorrectas (sacudida) */
+        .card-error {
+            animation: shake 0.4s;
+        }   
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+        /* --- Leaderboard Lateral --- */
+        .leaderboard-daily {
+            position: fixed; left: 30px; top: 120px;
+            background: rgba(255, 255, 255, 0.05); padding: 20px;
+            border-radius: 15px; width: 200px; border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        .leaderboard-daily h3 { font-size: 1.1rem; color: var(--accent); margin: 0 0 15px 0; border-bottom: 1px solid var(--accent); }
+        .leaderboard-daily ol { padding-left: 25px; margin: 0; color: var(--cyan); line-height: 1.6; }
+
+        /* --- Modal --- */
+        .modal {
+            display: none; position: fixed; z-index: 2000;
+            left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9);
+        }
+        .modal-content {
+            background: var(--bg-color); margin: 10% auto; padding: 30px;
+            width: 320px; border-radius: 20px; border: 1px solid var(--cyan); text-align: center;
+        }
+        .modal-content input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; font-size: 1rem; }
+        .tab-btn { background: none; border: none; color: #888; cursor: pointer; padding: 10px; font-size: 1.1rem; }
+        .tab-btn.active { color: var(--accent); font-weight: bold; border-bottom: 3px solid var(--accent); }
+
+        #btn-verificar {
+            margin-top: 40px; padding: 15px 50px; border-radius: 40px;
+            background: var(--accent); color: white; border: none;
+            font-weight: bold; cursor: pointer; font-size: 1.2rem; transition: 0.2s;
+        }
+        #btn-verificar:hover { transform: scale(1.1); background: #ff4d6d; }
+        #btn-verificar:disabled { background: #555; cursor: not-allowed; transform: none; }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <div class="streak-container" id="streak-ui" style="visibility: hidden;">
+            <div class="pokeball-streak"></div>
+            <span id="streak-val">0</span>
+        </div>
+        <div class="auth-section" id="auth-section">
+            <button class="auth-btn" onclick="openModal()">Log In / Registro</button>
+        </div>
+    </div>
+
+    <div class="leaderboard-daily">
+        <h3>🏆 Mejores Hoy</h3>
+        <ol id="daily-list"><li>Cargando...</li></ol>
+    </div>
+
+    <div id="timer">00.0s</div>
+    <div id="intentos-ui">Intentos: <span id="corazones">❤️❤️❤️</span></div>
+
+    <h1>Pokémon Pyramid</h1>
+    <div id="categoria-texto">Cargando desafío...</div>
+
+    <div class="pyramid">
+        <div class="row" id="fila-1" data-limit="1"></div>
+        <div class="row" id="fila-2" data-limit="2"></div>
+        <div class="row" id="fila-3" data-limit="3"></div>
+        <div class="row" id="fila-4" data-limit="4"></div>
+    </div>
+
+    <button id="btn-verificar" onclick="verificar()">COMPROBAR PUZZLE</button>
+    <div id="mensaje"></div>
+
+    <div id="authModal" class="modal">
+        <div class="modal-content">
+            <div style="margin-bottom: 20px;">
+                <button class="tab-btn active" id="tabLogin" onclick="switchTab('login')">Entrar</button>
+                <button class="tab-btn" id="tabReg" onclick="switchTab('reg')">Registro</button>
+            </div>
+            <input type="text" id="auth-user" placeholder="Usuario">
+            <input type="email" id="auth-email" placeholder="Email" style="display:none;">
+            <input type="password" id="auth-pass" placeholder="Contraseña">
+            <button class="auth-btn primary" onclick="procesarAuth()" style="width:100%; margin-top:20px; padding: 12px;">Enviar</button>
+            <button class="auth-btn" onclick="closeModal()" style="border:none; margin-top:15px; font-size: 0.8rem;">Cerrar</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:8000";
+        let startTime;
+        let timerInterval;
+        let intentos = 3;
+        let juegoTerminado = false;
+        let authMode = 'login';
+
+        async function inicializar() {
+            const user = localStorage.getItem('username');
+            if (user) {
+                document.getElementById('streak-ui').style.visibility = 'visible';
+                document.getElementById('streak-val').innerText = localStorage.getItem('racha') || 0;
+                document.getElementById('auth-section').innerHTML = `
+                    <span style="font-size:0.9rem; margin-right:10px;">Entrenador: <b>${user}</b></span>
+                    <button class="auth-btn" onclick="logout()">Salir</button>
+                `;
+            }
+            await cargarTorre();
+            await cargarLeaderboard();
+            startTimer();
+        }
+
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const diff = (Date.now() - startTime) / 1000;
+                document.getElementById('timer').innerText = diff.toFixed(1) + "s";
+            }, 100);
+        }
+
+        async function cargarTorre() {
+            const res = await fetch(`${API_URL}/get-tower`);
+            const data = await res.json();
+            document.getElementById('categoria-texto').innerText = `ORDENA POR: ${data.categoria_reto}`;
+            
+            const rows = ['fila-1', 'fila-2', 'fila-3', 'fila-4'];
+            let idx = 0;
+            rows.forEach((id, i) => {
+                const el = document.getElementById(id);
+                for(let j=0; j <= i; j++) el.appendChild(crearCard(data.pokemon_list[idx++]));
+                new Sortable(el, { group: 'pyramid', animation: 150, swap: true });
+            });
+        }
+
+        function crearCard(p) {
+            const div = document.createElement('div');
+            div.className = 'pokemon-card';
+            div.setAttribute('data-name', p.name);
+            div.innerHTML = `<img src="${p.image}"><span>${p.name}</span>`;
+            return div;
+        }
+
+        async function verificar() {
+            if (juegoTerminado) return;
+
+            const cards = document.querySelectorAll('.pokemon-card');
+            const names = Array.from(cards).map(c => c.getAttribute('data-name'));
+            const tiempo = (Date.now() - startTime) / 1000;
+            const user = localStorage.getItem('username') || "null";
+
+            const res = await fetch(`${API_URL}/verify?username=${user}&tiempo=${tiempo}`, {
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(names)
+            });
+            const data = await res.json();
+
+            // --- LÓGICA DE PINTAR ACIERTOS ---
+            // data.aciertos debe ser una lista tipo [true, false, true...]
+            if (data.aciertos) {
+                cards.forEach((card, index) => {
+                    if (data.aciertos[index]) {
+                        card.classList.add('card-correct');
+                        card.classList.remove('card-error');
+                    } else {
+                        card.classList.remove('card-correct');
+                        // Añadimos sacudida para las malas
+                        card.classList.add('card-error');
+                        setTimeout(() => card.classList.remove('card-error'), 400);
+                    }
+                });
+            }
+        
+            if (data.status === "correct") {
+                finalizarJuego(true, `✅ ¡INCREÍBLE! Tiempo: ${tiempo}s`, data.info);
+            } else {
+                intentos--;
+                actualizarCorazones();
+                if (intentos <= 0) {
+                    finalizarJuego(false, "❌ SE ACABARON LOS INTENTOS", data.info);
+                } else {
+                    document.getElementById('mensaje').innerHTML = 
+                        `<span style="color:#ff4d6d">❌ Algunos están mal. Te quedan ${intentos} intentos.</span>`;
+                }
+            }
+}
+        function finalizarJuego(victoria, texto, info) {
+            juegoTerminado = true;
+            clearInterval(timerInterval);
+            document.getElementById('btn-verificar').disabled = true;
+            document.getElementById('mensaje').innerHTML = `<h2 style="color:${victoria?'#80ffdb':'#ff4d6d'}">${texto}</h2>`;
+            
+            // Revelar datos reales
+            document.querySelectorAll('.pokemon-card').forEach(card => {
+                const name = card.getAttribute('data-name');
+                const val = info[name];
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'info-extra';
+                infoDiv.innerText = val;
+                card.appendChild(infoDiv);
+                card.style.border = victoria ? "3px solid #80ffdb" : "3px solid #ff4d6d";
+            });
+
+            if (victoria) setTimeout(() => location.reload(), 5000);
+        }
+
+        function actualizarCorazones() {
+            const icons = ["", "❤️", "❤️❤️", "❤️❤️❤️"];
+            document.getElementById('corazones').innerText = icons[intentos];
+        }
+
+        // --- Auth Functions ---
+        function openModal() { document.getElementById('authModal').style.display = 'block'; }
+        function closeModal() { document.getElementById('authModal').style.display = 'none'; }
+        function switchTab(m) {
+            authMode = m;
+            document.getElementById('auth-email').style.display = m==='reg' ? 'block' : 'none';
+            document.getElementById('tabLogin').className = m==='login' ? 'tab-btn active' : 'tab-btn';
+            document.getElementById('tabReg').className = m==='reg' ? 'tab-btn active' : 'tab-btn';
+        }
+
+        async function procesarAuth() {
+            const u = document.getElementById('auth-user').value;
+            const p = document.getElementById('auth-pass').value;
+            const e = document.getElementById('auth-email').value;
+            const path = authMode === 'login' ? '/login' : '/register';
+            const res = await fetch(`${API_URL}${path}`, { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: u, password: p, email: e }) // Enviado como Body
+    });
+    
+            const data = await res.json();
+            if (data.status === "success") {
+                localStorage.setItem('username', u);
+                if (data.racha !== undefined) localStorage.setItem('racha', data.racha);
+                location.reload();
+            } else { alert("Error: " + data.message); }
+        }
+
+        async function cargarLeaderboard() {
+            const res = await fetch(`${API_URL}/leaderboard_tiempo`);
+            const data = await res.json();
+            document.getElementById('daily-list').innerHTML = data.map(i => 
+                `<li><b>${i.username}</b>: ${i.tiempo_hoy.toFixed(2)}s</li>`
+            ).join('') || "<li>Nadie hoy</li>";
+        }
+
+        function logout() { localStorage.clear(); location.reload(); }
+        window.onload = inicializar;
+    </script>
+</body>
+</html>

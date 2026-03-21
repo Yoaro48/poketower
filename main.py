@@ -1,0 +1,218 @@
+from email.mime import base
+from typing import Optional
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from pydantic import BaseModel
+from typing import List
+from enum import Enum
+from datetime import date
+import sqlite3
+from passlib.context import CryptContext
+import bcrypt
+
+if not hasattr(bcrypt, "__about__"):
+    bcrypt.__about__ = type("About", (object,), {"__version__": bcrypt.__version__})
+
+class UserAuth(BaseModel):
+    username: str
+    password: str = None
+    email: Optional[str] 
+
+class Categoria(str, Enum):
+    peso = "weight"
+    altura = "height"
+    ataque = "base_attack"
+    defensa = "base_defense"
+
+class PokemonSimplificado(BaseModel):
+    id: int
+    name: str
+    image: str
+
+class TowerChallenge(BaseModel):
+    categoria_reto: Categoria
+    pokemon_list: list[PokemonSimplificado]
+
+from fastapi import FastAPI
+import pandas as pd
+import random
+import uuid
+
+app = FastAPI()
+
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Esto permite que cualquier web use tu API
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+df = pd.read_csv("pokemon.csv")
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def obtener_configuracion_hoy():
+    hoy = date.today()
+    semilla = int(hoy.strftime("%Y%m%d"))
+    
+    categorias_disp = list(Categoria)
+    print(categorias_disp)
+    categoria = categorias_disp[semilla % len(categorias_disp)]
+    
+    return semilla, categoria
+
+@app.get("/get-tower", response_model=TowerChallenge)
+def get_tower():
+    # 1. Cogemos 5 al azar con Pandas
+    semilla, categoria = obtener_configuracion_hoy()
+    
+    # 2. Usamos la semilla para que el sample de Pandas sea igual para todos hoy
+    # Usamos random_state para fijar la semilla en Pandas
+    sample = df.sample(10, random_state=semilla)
+    
+    # 2. Creamos la lista de objetos Pokemon
+    lista_pokemon = []
+    for _, row in sample.iterrows():
+        lista_pokemon.append(
+            PokemonSimplificado(id=row['id'], name=row['name'].capitalize(), image=row['image'])
+        )
+    
+    # 3. Mezclamos para que no aparezcan ordenados por defecto
+    random.seed(semilla)  # Fijamos la semilla para que el shuffle sea igual para todos hoy
+    random.shuffle(lista_pokemon)
+
+    # Cambia cada día
+    # 4. Devolvemos el objeto Tower
+    return TowerChallenge( # ID único para esta partida
+        categoria_reto=categoria,
+        pokemon_list=lista_pokemon
+    )
+
+@app.post("/verify")
+def verify_order(user_order: List[str],tiempo: float, username: str = None):
+
+    sufixes = {
+        "weight": "kg",
+        "height": "m",
+        "base_attack": "atk",
+        "base_defense": "def",
+        "base_speed": "spe",
+        "base_sp_attack": "spa",
+        "base_sp_defense": "spd",
+        "base_hp": "hp",
+        "base_stat_total": "bst"
+    }
+    #user_order sería algo como ["bulbasaur", "pikachu", "charizard"...]
+    _, categoria = obtener_configuracion_hoy()
+    # Buscamos los datos reales de esos pokemon en nuestro CSV
+    user_order_lower = [name.lower() for name in user_order]
+    datos_reales = df[df['name'].isin(user_order_lower)].copy()
+
+   
+
+    # Los ordenamos por peso en Python
+    datos_reales = datos_reales.sort_values(by=categoria.value)
+    orden_correcto = datos_reales['name'].tolist()
+
+    # Lista de aciertos
+    aciertos = [u == c for u,c in zip(user_order_lower, orden_correcto)]
+
+    # Le pasamos info extra para enseñar sus valores al acabar
+    info_extra = {row['name'].capitalize(): f"{row[categoria.value]} {sufixes.get(categoria.value, "")}" for _, row in datos_reales.iterrows()}
+    
+    if user_order == orden_correcto:
+        submit_result(username=username, tiempo=tiempo, completado=True)  # Aquí deberías pasar el username real y el tiempo real
+        return {"status": "correct", "message": "¡Increíble!", "info": info_extra,"aciertos": aciertos}
+    else:
+        return {"status": "wrong", "correct_order": orden_correcto, "info": info_extra, "aciertos": aciertos}
+    
+@app.get("/leaderboard_racha")
+def get_leaderboard_racha():
+    conn = sqlite3.connect('usuarios.db')
+    cursor = conn.cursor()
+    racha = cursor.execute
+    ('SELECT username, mejor_racha '
+    'FROM perfiles '
+    'ORDER BY mejor_racha DESC').fetchmany(5)
+    conn.close()
+    return [{"username": row[0], "racha_actual": row[1]} for row in racha]
+
+@app.get("/leaderboard_tiempo")
+def get_leaderboard_tiempo():
+    conn = sqlite3.connect('usuarios.db')
+    cursor = conn.cursor()
+    tiempo = cursor.execute(
+        'SELECT username, tiempo '
+        'FROM tiempos WHERE fecha = date("now")'
+        'ORDER BY tiempo ASC ').fetchmany(5)
+    conn.close()
+    return [{"username": row[0], "tiempo_hoy": row[1]} for row in tiempo]
+
+@app.post("/submit_result")
+def submit_result(tiempo: float, completado: bool,username: str = None):
+
+    if not username or username.strip() == "":
+        return {"message": "Jugador anonimo, resultado no guardado"}
+    
+    conn = sqlite3.connect('usuarios.db')
+    cursor = conn.cursor()
+    
+    # La racha se actualiza mediante un trigger en la base de datos, así que aquí solo insertamos el resultado
+
+    # Guardamos el tiempo
+    cursor.execute('INSERT INTO tiempos (username, tiempo, completado,fecha) VALUES (?, ?, ?, date("now"))', (username, tiempo, 1 if completado else 0))
+    
+    conn.commit()
+    conn.close()
+    
+    return {"message": "Resultado guardado correctamente"}
+
+@app.post("/register")
+def register(UserAuth: UserAuth):
+    try:
+        username = UserAuth.username
+        password = UserAuth.password
+        email = UserAuth.email
+        print("Recibido registro para:", username, email, password)
+
+        password_bytes = password.encode('utf-8')
+
+        # 2. Truncamos los primeros 72 BYTES
+        password_truncated = password_bytes[:72]  # Limitar a 72 caracteres para bcrypt
+        password_truncated = password_truncated.decode('latin-1')
+        hashed = pwd_context.hash(password_truncated)
+
+    except Exception as e:
+        HTTPException(status_code=400, detail="Error al parsear la contraseña " + str(e))
+        return {"status": "error" ,"message": "Error al procesar la contraseña: " + str(e)}
+    
+
+    try:
+        conn = sqlite3.connect('usuarios.db')
+        c = conn.cursor()
+        c.execute("INSERT INTO perfiles (username, password_hash, email) VALUES (?, ?, ?)", (username, hashed, email))
+        conn.commit()
+        return {"status": "success"}
+    
+    except Exception as e:
+        HTTPException(status_code=400, detail="Error al registrar el usuario: " + str(e))
+        return {"status": "error", "message": str(e)}
+
+@app.post("/login")
+def login(UserAuth: UserAuth):
+    conn = sqlite3.connect('usuarios.db')
+    c = conn.cursor()
+    username = UserAuth.username
+    password = UserAuth.password
+
+
+    c.execute("SELECT password_hash, racha_actual, ultima_fecha_jugada FROM perfiles WHERE username=?", (username,))
+    user = c.fetchone()
+
+    password_truncated = password.encode("utf-8")[:72] # Limitar a 72 caracteres para bcrypt
+    
+    if user and pwd_context.verify(password_truncated, user[0]):
+        return {"status": "success", "racha": user[1], "ultima": user[2]}
+    return {"status": "error", "message": "Credenciales inválidas"}

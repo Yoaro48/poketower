@@ -125,7 +125,7 @@ def verify_order(user_order: List[str], tiempo: float, username: str = None):
     info_extra = {row['name'].capitalize(): f"{row[categoria.value]}{sufixes.get(categoria.value, '')}" for _, row in datos_reales.iterrows()}
     
     # 6. La comprobación final debe ser con las dos listas en minúsculas
-    if user_order_lower == orden_correcto_lower:
+    if aciertos.count(False) == 0:
         submit_result(username=username, tiempo=tiempo, completado=True)
         return {"status": "correct", "message": "¡Increíble!", "info": info_extra, "aciertos": aciertos}
     else:

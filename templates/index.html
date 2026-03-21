@@ -3,16 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pokemon Pyramid Swap - Ranked</title>
+    <title>Pokémon Pyramid Swap - Ranked</title>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
         :root {
-            --bg-color: #353557;
+            --bg-color: #1e1e51; 
             --card-bg: #f1faee;
             --accent: #e63946;
             --text-main: #f1faee;
             --text-dark: #1a1a2e;
             --cyan: #a8dadc;
+            --fire-color: #ff4500;
+            --fire-core: #ffcb05;
         }
 
         body { 
@@ -20,28 +22,45 @@
             background: var(--bg-color); 
             color: var(--text-main); 
             display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            padding: 20px; margin: 0;
+            justify-content: center;
+            align-items: center;
+            height: 100vh; 
+            margin: 0;
+            padding: 0;
+            overflow: hidden; 
             counter-reset: rank; 
+            position: relative;
         }
 
-        /* --- Barra Superior --- */
-        .top-bar {
-            width: 100%; max-width: 1200px;
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 10px 40px; box-sizing: border-box;
+        body::before {
+            content: ''; position: absolute; width: 100%; height: 100%;
+            background-image: url('https://www.transparenttextures.com/patterns/dark-dotted-2.png');
+            opacity: 0.3; z-index: -1;
         }
 
-        .streak-container {
-            display: flex; align-items: center; gap: 10px;
-            font-weight: bold; color: #ffcb05; font-size: 1.2rem;
+        /* --- Esquina Superior Izquierda: Racha con Fuegito --- */
+        .streak-corner {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            visibility: hidden; 
+            z-index: 10;
+        }
+
+        .pokeball-container {
+            position: relative;
+            width: 45px; height: 45px;
+            display: flex; justify-content: center; align-items: center;
         }
 
         .pokeball-streak {
             width: 35px; height: 35px;
             background: linear-gradient(to bottom, var(--accent) 50%, white 50%);
             border-radius: 50%; border: 2px solid #000; position: relative;
+            z-index: 2; 
         }
         .pokeball-streak::after {
             content: ''; position: absolute; top: 50%; left: 50%;
@@ -49,35 +68,115 @@
             background: white; border: 2px solid #000; border-radius: 50%;
         }
 
-        .auth-section { display: flex; align-items: center; gap: 15px; }
+        .fire-effect {
+            position: absolute;
+            width: 100%; height: 100%;
+            background: radial-gradient(circle, var(--fire-core) 20%, var(--fire-color) 60%, transparent 80%);
+            border-radius: 50%;
+            filter: blur(5px);
+            animation: flamePulse 1.5s ease-in-out infinite;
+            opacity: 0.8;
+            z-index: 1;
+        }
 
+        @keyframes flamePulse {
+            0%, 100% { transform: scale(1); opacity: 0.7; box-shadow: 0 0 10px var(--fire-color); }
+            50% { transform: scale(1.15); opacity: 1; box-shadow: 0 0 20px var(--fire-core), 0 0 30px var(--fire-color); }
+        }
+
+        #streak-val { font-weight: bold; color: var(--fire-core); font-size: 1.5rem; text-shadow: 0 0 5px #000; }
+
+        /* --- Esquina Superior Derecha: Botones Auth --- */
+        .auth-corner {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex; gap: 10px; align-items: center;
+            z-index: 10;
+        }
         .auth-btn {
-            padding: 6px 16px; font-size: 0.85rem; border-radius: 20px;
+            padding: 5px 15px; font-size: 0.8rem; border-radius: 20px;
             border: 1.5px solid var(--accent); background: transparent;
             color: white; cursor: pointer; transition: 0.3s;
         }
         .auth-btn.primary { background: var(--accent); }
         .auth-btn:hover { background: rgba(230, 57, 70, 0.2); }
 
-        /* --- UI de Estado --- */
-        #timer { font-size: 3rem; font-family: monospace; color: var(--accent); margin: 10px 0; }
-        #intentos-ui { font-size: 1.4rem; margin-bottom: 20px; }
-        .heart { color: var(--accent); margin: 0 2px; }
+        /* --- Panel Lateral Izquierdo: Leaderboard --- */
+        .leaderboard-daily {
+            position: absolute; left: 20px; top: 100px;
+            background: rgba(255, 255, 255, 0.03); padding: 15px;
+            border-radius: 12px; width: 180px; border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(5px);
+        }
+        .leaderboard-daily h3 { font-size: 1rem; color: var(--accent); margin: 0 0 10px 0; border-bottom: 1px solid var(--accent); text-align: center;}
+        .leaderboard-daily ol { padding-left: 20px; margin: 0; color: var(--cyan); font-size: 0.8rem; line-height: 1.5; }
 
-        /* --- Pirámide (Tamaño Original) --- */
-        h1 { margin: 5px 0; text-shadow: 2px 2px var(--accent); font-size: 2.5rem; }
-        #categoria-texto { color: var(--cyan); font-size: 1.3em; margin-bottom: 30px; text-transform: uppercase; }
+        /* --- Panel Lateral Derecho: Stats (Corregido a Horizontal) --- */
+        .stats-panel-right {
+            position: absolute;
+            right: 20px;
+            top: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            width: 150px; /* Un poco más ancho para corazones horizontales */
+        }
 
-        .pyramid { display: flex; flex-direction: column; align-items: center; gap: 15px; }
-        .row { display: flex; justify-content: center; gap: 15px; min-height: 130px; }
+        #timer { font-size: 2.5rem; font-family: monospace; color: var(--accent); font-weight: bold; text-shadow: 0 0 10px rgba(230, 57, 70, 0.5); }
+        
+        /* Corazones Horizontales (Vuelven a ser como antes) */
+        #corazones { 
+            font-size: 1.8rem; 
+            display: flex; 
+            flex-direction: row; /* Horizontal */
+            gap: 5px; 
+            letter-spacing: 2px;
+        } 
+        
+        .stats-label { font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: -10px; }
 
-        /* Pokemon cards */
+        /* --- Área Central del Juego --- */
+        .main-game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            max-width: 800px;
+            height: 90vh; 
+        }
+
+        h1 { margin: 0 0 5px 0; text-shadow: 2px 2px var(--accent); font-size: 2.2rem; }
+        #categoria-texto { color: var(--cyan); font-size: 1.1em; margin-bottom: 15px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;}
+
+        .pyramid { 
+            display: flex; flex-direction: column; align-items: center; gap: 15px; 
+            transform: scale(1); 
+            transition: transform 0.3s ease;
+        }
+        
+        @media (max-height: 800px) {
+            .pyramid { transform: scale(0.85); margin-top: -30px; }
+            h1 { font-size: 1.8rem; }
+        }
+
+        .row { display: flex; justify-content: center; gap: 10px; min-height: 130px; }
+
         .pokemon-card {
             background: var(--card-bg); color: var(--text-dark);
             width: 100px; height: 130px; border-radius: 12px; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             cursor: grab; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
         }
+
+        .pokemon-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(168, 218, 220, 0.3); }
 
         .pokemon-card::after {
             counter-increment: rank; content: counter(rank);
@@ -86,71 +185,63 @@
             width: 24px; height: 24px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             font-size: 0.8rem; font-weight: bold; border: 2px solid var(--card-bg);
+            z-index: 3;
         }
 
         .pokemon-card img { width: 75px; height: 75px; pointer-events: none; }
-        .pokemon-card span { font-size: 0.8rem; font-weight: bold; text-transform: capitalize; }
-        .pokemon-card .info-extra { font-size: 0.7rem; color: var(--accent); font-weight: bold; margin-top: 2px; }
+        .pokemon-card span { font-size: 0.8rem; font-weight: bold; text-transform: capitalize; padding: 0 5px; text-align: center;}
+        .pokemon-card .info-extra { font-size: 0.75rem; color: var(--accent); font-weight: bold; margin-top: 2px; }
 
-        .card-correct {
-            border: 3px solid #2ecc71 !important;
-            box-shadow: 0 0 15px rgba(46, 204, 113, 0.6) !important;
-            transform: scale(1.05);
-            transition: all 0.3s ease;
+        .card-correct { border-color: #2ecc71 !important; box-shadow: 0 0 15px rgba(46, 204, 113, 0.5) !important; }
+        .card-error { animation: shake 0.4s; border-color: #e74c3c !important;}
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
         }
 
-    /* Animación opcional para las incorrectas (sacudida) */
-        .card-error {
-            animation: shake 0.4s;
-        }   
-
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-5px); }
-    75% { transform: translateX(5px); }
-}
-        /* --- Leaderboard Lateral --- */
-        .leaderboard-daily {
-            position: fixed; left: 30px; top: 120px;
-            background: rgba(255, 255, 255, 0.05); padding: 20px;
-            border-radius: 15px; width: 200px; border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
+        #btn-verificar {
+            margin-top: 20px; padding: 12px 40px; border-radius: 40px;
+            background: var(--accent); color: white; border: none;
+            font-weight: bold; cursor: pointer; font-size: 1.1rem; transition: 0.2s;
+            box-shadow: 0 4px 10px rgba(230, 57, 70, 0.3);
         }
-        .leaderboard-daily h3 { font-size: 1.1rem; color: var(--accent); margin: 0 0 15px 0; border-bottom: 1px solid var(--accent); }
-        .leaderboard-daily ol { padding-left: 25px; margin: 0; color: var(--cyan); line-height: 1.6; }
+        #btn-verificar:hover { transform: scale(1.05); background: #ff4d6d; }
+        #btn-verificar:disabled { background: #555; cursor: not-allowed; transform: none; box-shadow: none;}
 
-        /* --- Modal --- */
+        #mensaje { margin-top: 10px; font-weight: bold; height: 20px; text-align: center; font-size: 0.9rem;}
+
         .modal {
             display: none; position: fixed; z-index: 2000;
             left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9);
         }
         .modal-content {
             background: var(--bg-color); margin: 10% auto; padding: 30px;
-            width: 320px; border-radius: 20px; border: 1px solid var(--cyan); text-align: center;
+            width: 300px; border-radius: 20px; border: 1px solid var(--cyan); text-align: center;
         }
-        .modal-content input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; font-size: 1rem; }
+        .modal-content input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; font-size: 1rem; background: rgba(255,255,255,0.1); color: white;}
         .tab-btn { background: none; border: none; color: #888; cursor: pointer; padding: 10px; font-size: 1.1rem; }
         .tab-btn.active { color: var(--accent); font-weight: bold; border-bottom: 3px solid var(--accent); }
 
-        #btn-verificar {
-            margin-top: 40px; padding: 15px 50px; border-radius: 40px;
-            background: var(--accent); color: white; border: none;
-            font-weight: bold; cursor: pointer; font-size: 1.2rem; transition: 0.2s;
+        .made-by {
+            position: absolute; bottom: 10px; right: 10px;
+            font-size: 0.6rem; color: rgba(255,255,255,0.2); font-family: monospace;
         }
-        #btn-verificar:hover { transform: scale(1.1); background: #ff4d6d; }
-        #btn-verificar:disabled { background: #555; cursor: not-allowed; transform: none; }
     </style>
 </head>
 <body>
 
-    <div class="top-bar">
-        <div class="streak-container" id="streak-ui" style="visibility: hidden;">
+    <div class="streak-corner" id="streak-ui">
+        <div class="pokeball-container">
+            <div class="fire-effect"></div>
             <div class="pokeball-streak"></div>
-            <span id="streak-val">0</span>
         </div>
-        <div class="auth-section" id="auth-section">
-            <button class="auth-btn" onclick="openModal()">Log In / Registro</button>
-        </div>
+        <span id="streak-val">0</span>
+    </div>
+
+    <div class="auth-corner" id="auth-section">
+        <button class="auth-btn" onclick="openModal()">Log In / Registro</button>
     </div>
 
     <div class="leaderboard-daily">
@@ -158,21 +249,27 @@
         <ol id="daily-list"><li>Cargando...</li></ol>
     </div>
 
-    <div id="timer">00.0s</div>
-    <div id="intentos-ui">Intentos: <span id="corazones">❤️❤️❤️</span></div>
-
-    <h1>Pokémon Pyramid</h1>
-    <div id="categoria-texto">Cargando desafío...</div>
-
-    <div class="pyramid">
-        <div class="row" id="fila-1" data-limit="1"></div>
-        <div class="row" id="fila-2" data-limit="2"></div>
-        <div class="row" id="fila-3" data-limit="3"></div>
-        <div class="row" id="fila-4" data-limit="4"></div>
+    <div class="stats-panel-right">
+        <div class="stats-label">Tiempo</div>
+        <div id="timer">00.0s</div>
+        <div class="stats-label">Vidas</div>
+        <div id="corazones">❤️❤️❤️</div>
     </div>
 
-    <button id="btn-verificar" onclick="verificar()">COMPROBAR PUZZLE</button>
-    <div id="mensaje"></div>
+    <div class="main-game-container">
+        <h1>Pokémon Pyramid</h1>
+        <div id="categoria-texto">Cargando desafío...</div>
+
+        <div class="pyramid">
+            <div class="row" id="fila-1"></div>
+            <div class="row" id="fila-2"></div>
+            <div class="row" id="fila-3"></div>
+            <div class="row" id="fila-4"></div>
+        </div>
+
+        <button id="btn-verificar" onclick="verificar()">COMPROBAR ORDEN</button>
+        <div id="mensaje"></div>
+    </div>
 
     <div id="authModal" class="modal">
         <div class="modal-content">
@@ -188,6 +285,10 @@
         </div>
     </div>
 
+    <a class="made-by" href="https://github.com/Yoaro48" target="_blank" rel="noopener">
+        Made by Yoaro48
+    </a>
+
     <script>
         const API_URL = "http://localhost:8000";
         let startTime;
@@ -202,8 +303,8 @@
                 document.getElementById('streak-ui').style.visibility = 'visible';
                 document.getElementById('streak-val').innerText = localStorage.getItem('racha') || 0;
                 document.getElementById('auth-section').innerHTML = `
-                    <span style="font-size:0.9rem; margin-right:10px;">Entrenador: <b>${user}</b></span>
-                    <button class="auth-btn" onclick="logout()">Salir</button>
+                    <span style="font-size:0.8rem; color:#aaa;">Hola, <b>${user}</b></span>
+                    <button class="auth-btn" onclick="logout()" style="margin-left:10px;">Salir</button>
                 `;
             }
             await cargarTorre();
@@ -220,17 +321,19 @@
         }
 
         async function cargarTorre() {
-            const res = await fetch(`${API_URL}/get-tower`);
-            const data = await res.json();
-            document.getElementById('categoria-texto').innerText = `ORDENA POR: ${data.categoria_reto}`;
-            
-            const rows = ['fila-1', 'fila-2', 'fila-3', 'fila-4'];
-            let idx = 0;
-            rows.forEach((id, i) => {
-                const el = document.getElementById(id);
-                for(let j=0; j <= i; j++) el.appendChild(crearCard(data.pokemon_list[idx++]));
-                new Sortable(el, { group: 'pyramid', animation: 150, swap: true });
-            });
+            try {
+                const res = await fetch(`${API_URL}/get-tower`);
+                const data = await res.json();
+                document.getElementById('categoria-texto').innerText = `ORDENA POR: ${data.categoria_reto}`;
+                
+                const rows = ['fila-1', 'fila-2', 'fila-3', 'fila-4'];
+                let idx = 0;
+                rows.forEach((id, i) => {
+                    const el = document.getElementById(id);
+                    for(let j=0; j <= i; j++) el.appendChild(crearCard(data.pokemon_list[idx++]));
+                    new Sortable(el, { group: 'pyramid', animation: 150, swap: true });
+                });
+            } catch (e) { document.getElementById('categoria-texto').innerText = "Backend Offline"; }
         }
 
         function crearCard(p) {
@@ -243,74 +346,85 @@
 
         async function verificar() {
             if (juegoTerminado) return;
-
+            
             const cards = document.querySelectorAll('.pokemon-card');
             const names = Array.from(cards).map(c => c.getAttribute('data-name'));
             const tiempo = (Date.now() - startTime) / 1000;
             const user = localStorage.getItem('username') || "null";
 
-            const res = await fetch(`${API_URL}/verify?username=${user}&tiempo=${tiempo}`, {
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(names)
-            });
-            const data = await res.json();
+            cards.forEach(c => c.classList.remove('card-error'));
 
-            // --- LÓGICA DE PINTAR ACIERTOS ---
-            // data.aciertos debe ser una lista tipo [true, false, true...]
-            if (data.aciertos) {
-                cards.forEach((card, index) => {
-                    if (data.aciertos[index]) {
-                        card.classList.add('card-correct');
-                        card.classList.remove('card-error');
-                    } else {
-                        card.classList.remove('card-correct');
-                        // Añadimos sacudida para las malas
-                        card.classList.add('card-error');
-                        setTimeout(() => card.classList.remove('card-error'), 400);
-                    }
+            try {
+                const res = await fetch(`${API_URL}/verify?username=${user}&tiempo=${tiempo}`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(names)
                 });
-            }
-        
-            if (data.status === "correct") {
-                finalizarJuego(true, `✅ ¡INCREÍBLE! Tiempo: ${tiempo}s`, data.info);
-            } else {
-                intentos--;
-                actualizarCorazones();
-                if (intentos <= 0) {
-                    finalizarJuego(false, "❌ SE ACABARON LOS INTENTOS", data.info);
-                } else {
-                    document.getElementById('mensaje').innerHTML = 
-                        `<span style="color:#ff4d6d">❌ Algunos están mal. Te quedan ${intentos} intentos.</span>`;
+                const data = await res.json();
+                
+                if (data.aciertos) {
+                    cards.forEach((card, index) => {
+                        if (data.aciertos[index]) {
+                            card.classList.add('card-correct');
+                        } else {
+                            card.classList.add('card-error'); 
+                        }
+                    });
                 }
-            }
-}
+
+                if (data.status === "correct") {
+                    finalizarJuego(true, `✅ ¡INCREÍBLE! Tiempo: ${tiempo}s`, data.info);
+                } else {
+                    intentos--;
+                    actualizarCorazones();
+                    if (intentos <= 0) {
+                        finalizarJuego(false, "❌ GAME OVER", data.info);
+                    } else {
+                        document.getElementById('mensaje').innerHTML = `<span style="color:#ff4d6d">❌ Incorrecto. Vidas: ${intentos}</span>`;
+                        setTimeout(() => cards.forEach(c => c.classList.remove('card-error')), 500);
+                    }
+                }
+            } catch(e) { alert("Error conectando backend."); }
+        }
+
         function finalizarJuego(victoria, texto, info) {
             juegoTerminado = true;
             clearInterval(timerInterval);
             document.getElementById('btn-verificar').disabled = true;
-            document.getElementById('mensaje').innerHTML = `<h2 style="color:${victoria?'#80ffdb':'#ff4d6d'}">${texto}</h2>`;
+            document.getElementById('mensaje').innerHTML = `<span style="color:${victoria?'#80ffdb':'#ff4d6d'}">${texto}</span>`;
             
-            // Revelar datos reales
             document.querySelectorAll('.pokemon-card').forEach(card => {
-                const name = card.getAttribute('data-name');
-                const val = info[name];
+                const rawName = card.getAttribute('data-name');
+                const capitalized = rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase();
+                const val = info[capitalized] || info[rawName] || info[rawName.toLowerCase()] || "??";
+                
+                const oldInfo = card.querySelector('.info-extra');
+                if (oldInfo) oldInfo.remove();
+
                 const infoDiv = document.createElement('div');
                 infoDiv.className = 'info-extra';
                 infoDiv.innerText = val;
                 card.appendChild(infoDiv);
-                card.style.border = victoria ? "3px solid #80ffdb" : "3px solid #ff4d6d";
+                
+                if (!card.classList.contains('card-correct')) {
+                    card.style.border = victoria ? "3px solid #80ffdb" : "3px solid #ff4d6d";
+                }
             });
 
-            if (victoria) setTimeout(() => location.reload(), 5000);
+            if (victoria) setTimeout(() => location.reload(), 6000);
         }
 
+        // --- Función Actualizada para Corazones Horizontales ---
         function actualizarCorazones() {
-            const icons = ["", "❤️", "❤️❤️", "❤️❤️❤️"];
-            document.getElementById('corazones').innerText = icons[intentos];
+            // Se quitan los <br> y se generan seguidos
+            const h = '<span class="heart">❤️</span>';
+            const hEmpty = '<span class="heart" style="opacity:0.2">🖤</span>';
+            let html = "";
+            // Generar corazones seguidos en la misma línea
+            for(let i=0; i<3; i++) html += (i < intentos) ? h : hEmpty;
+            document.getElementById('corazones').innerHTML = html;
         }
 
-        // --- Auth Functions ---
+        // --- Auth ---
         function openModal() { document.getElementById('authModal').style.display = 'block'; }
         function closeModal() { document.getElementById('authModal').style.display = 'none'; }
         function switchTab(m) {
@@ -325,26 +439,25 @@
             const p = document.getElementById('auth-pass').value;
             const e = document.getElementById('auth-email').value;
             const path = authMode === 'login' ? '/login' : '/register';
-            const res = await fetch(`${API_URL}${path}`, { 
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: u, password: p, email: e }) // Enviado como Body
-    });
-    
-            const data = await res.json();
-            if (data.status === "success") {
-                localStorage.setItem('username', u);
-                if (data.racha !== undefined) localStorage.setItem('racha', data.racha);
-                location.reload();
-            } else { alert("Error: " + data.message); }
+            try {
+                const res = await fetch(`${API_URL}${path}?username=${u}&password=${p}&email=${e}`, { method: 'POST' });
+                const data = await res.json();
+                if (data.status === "success") {
+                    localStorage.setItem('username', u);
+                    if (data.racha !== undefined) localStorage.setItem('racha', data.racha);
+                    location.reload();
+                } else { alert("Error: " + data.message); }
+            } catch(err) { alert("Error."); }
         }
 
         async function cargarLeaderboard() {
-            const res = await fetch(`${API_URL}/leaderboard_tiempo`);
-            const data = await res.json();
-            document.getElementById('daily-list').innerHTML = data.map(i => 
-                `<li><b>${i.username}</b>: ${i.tiempo_hoy.toFixed(2)}s</li>`
-            ).join('') || "<li>Nadie hoy</li>";
+            try {
+                const res = await fetch(`${API_URL}/leaderboard_tiempo`);
+                const data = await res.json();
+                document.getElementById('daily-list').innerHTML = data.map(i => 
+                    `<li><b>${i.username}</b>: ${i.tiempo_hoy.toFixed(1)}s</li>`
+                ).join('') || "<li>Nadie hoy</li>";
+            } catch(e) { }
         }
 
         function logout() { localStorage.clear(); location.reload(); }

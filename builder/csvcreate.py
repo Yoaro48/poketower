@@ -25,7 +25,7 @@ def crear_base_datos():
     })
 
     df = pd.DataFrame(pokemon_list)
-    df.to_csv("poke_database.csv",index=False)
+    df.to_csv("../pokemon.csv",index=False)
     print("Exportado con exito")
 
 

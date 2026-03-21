@@ -91,42 +91,45 @@ def get_tower():
     )
 
 @app.post("/verify")
-def verify_order(user_order: List[str],tiempo: float, username: str = None):
+def verify_order(user_order: List[str], tiempo: float, username: str = None):
 
     sufixes = {
-        "weight": "kg",
-        "height": "m",
-        "base_attack": "atk",
-        "base_defense": "def",
-        "base_speed": "spe",
-        "base_sp_attack": "spa",
-        "base_sp_defense": "spd",
-        "base_hp": "hp",
-        "base_stat_total": "bst"
+        "weight": "kg", "height": "m", "base_attack": "atk",
+        "base_defense": "def", "base_speed": "spe", "base_sp_attack": "spa",
+        "base_sp_defense": "spd", "base_hp": "hp", "base_stat_total": "bst"
     }
-    #user_order sería algo como ["bulbasaur", "pikachu", "charizard"...]
-    _, categoria = obtener_configuracion_hoy()
-    # Buscamos los datos reales de esos pokemon en nuestro CSV
-    user_order_lower = [name.lower() for name in user_order]
-    datos_reales = df[df['name'].isin(user_order_lower)].copy()
-
-   
-
-    # Los ordenamos por peso en Python
-    datos_reales = datos_reales.sort_values(by=categoria.value)
-    orden_correcto = datos_reales['name'].tolist()
-
-    # Lista de aciertos
-    aciertos = [u == c for u,c in zip(user_order_lower, orden_correcto)]
-
-    # Le pasamos info extra para enseñar sus valores al acabar
-    info_extra = {row['name'].capitalize(): f"{row[categoria.value]} {sufixes.get(categoria.value, "")}" for _, row in datos_reales.iterrows()}
     
-    if user_order == orden_correcto:
-        submit_result(username=username, tiempo=tiempo, completado=True)  # Aquí deberías pasar el username real y el tiempo real
-        return {"status": "correct", "message": "¡Increíble!", "info": info_extra,"aciertos": aciertos}
+    _, categoria = obtener_configuracion_hoy()
+    
+    # 1. Pasamos el orden del usuario a minúsculas estrictas
+    user_order_lower = [name.lower() for name in user_order]
+    
+    # 2. Buscamos ignorando mayúsculas en el DataFrame
+    datos_reales = df[df['name'].str.lower().isin(user_order_lower)].copy()
+
+    datos_dicc = {row['name'].lower(): row[categoria.value] for _, row in datos_reales.iterrows()}
+
+    # 3. Creamos una columna temporal 100% en minúsculas para el orden real
+    datos_reales['name_lower'] = datos_reales['name'].str.lower()
+    
+    # Ordenamos
+    datos_reales = datos_reales.sort_values(by=categoria.value, ascending=False)
+    
+    # 4. Extraemos el orden correcto también en minúsculas
+    orden_correcto_lower = datos_reales['name_lower'].tolist()
+
+    # 5. AHORA SÍ: Comparamos peras con peras (minúscula con minúscula) y sus valores en caso de que sea el mismo
+    aciertos = [u == c or datos_dicc.get(u) == datos_dicc.get(c) for u, c in zip(user_order_lower, orden_correcto_lower)]
+
+    # Info extra (mantenemos capitalize para que se vea bien en el HTML)
+    info_extra = {row['name'].capitalize(): f"{row[categoria.value]}{sufixes.get(categoria.value, '')}" for _, row in datos_reales.iterrows()}
+    
+    # 6. La comprobación final debe ser con las dos listas en minúsculas
+    if user_order_lower == orden_correcto_lower:
+        submit_result(username=username, tiempo=tiempo, completado=True)
+        return {"status": "correct", "message": "¡Increíble!", "info": info_extra, "aciertos": aciertos}
     else:
-        return {"status": "wrong", "correct_order": orden_correcto, "info": info_extra, "aciertos": aciertos}
+        return {"status": "wrong", "correct_order": orden_correcto_lower, "info": info_extra, "aciertos": aciertos}
     
 @app.get("/leaderboard_racha")
 def get_leaderboard_racha():
@@ -153,7 +156,7 @@ def get_leaderboard_tiempo():
 @app.post("/submit_result")
 def submit_result(tiempo: float, completado: bool,username: str = None):
 
-    if not username or username.strip() == "":
+    if not username or username.strip() == "" or username.lower() == "null":
         return {"message": "Jugador anonimo, resultado no guardado"}
     
     conn = sqlite3.connect('usuarios.db')
@@ -197,7 +200,7 @@ def register(UserAuth: UserAuth):
         return {"status": "success"}
     
     except Exception as e:
-        HTTPException(status_code=400, detail="Error al registrar el usuario: " + str(e))
+        HTTPException(status_code=400, detail="Error al registrar el usuario en la db: " + str(e))
         return {"status": "error", "message": str(e)}
 
 @app.post("/login")

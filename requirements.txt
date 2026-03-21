@@ -1,0 +1,6 @@
+pandas
+pydantic
+fastapi
+sqlite3
+bcrypt
+uvicorn

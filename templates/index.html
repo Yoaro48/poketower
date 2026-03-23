@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pokémon Pyramid Swap - Ranked</title>
+    <title>Pokemon Pyramid Swap - Ranked</title>
+    <link rel="icon" type="image/png" href="Logo_web.png">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
         :root {
@@ -15,25 +17,26 @@
             --cyan: #a8dadc;
             --fire-color: #ff4500;
             --fire-core: #ffcb05;
+            --bg-gradient: radial-gradient(circle at center, #2c2c6d 0%, #1e1e51 100%);
+            --accent: #e63946;
+            --card-bg: #f1faee;
         }
 
     /* ... (resto del CSS igual) ... */
 
-    body { 
-        font-family: 'Segoe UI', sans-serif; 
-        background: var(--bg-color); 
-        color: var(--text-main); 
-        display: flex; 
-        flex-direction: column; 
-        align-items: center; 
-        /* Cambiamos el padding-top para que no se corte el título */
-        padding: 40px 20px 10px 20px; 
-        margin: 0;
-        height: 100vh;
-        box-sizing: border-box; /* Importante para que el padding no sume al alto */
-        overflow: hidden;
-        
-    }
+body { 
+    font-family: 'Segoe UI', sans-serif; 
+    background: var(--bg-gradient); /* Cambiado por el degradado */
+    color: var(--text-main); 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    padding: 30px 20px; 
+    margin: 0;
+    height: 100vh;
+    box-sizing: border-box;
+    overflow: hidden;
+}
 
     h1 { 
         margin: 0 0 5px 0; 
@@ -44,7 +47,7 @@
 
     /* Media query equilibrada para tu portátil */
     @media (max-height: 850px) {
-        body { padding-top: 35px; } /* Un poco menos en pantallas pequeñas pero sin salir del margen */
+        body { padding-top: 50px; } /* Un poco menos en pantallas pequeñas pero sin salir del margen */
         
         h1 { font-size: 1.8rem; }
         
@@ -142,7 +145,7 @@
             border-radius: 12px; width: 180px; border: 1px solid rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(5px);
         }
-        .leaderboard-daily h3 { font-size: 1rem; color: var(--accent); margin: 0 0 10px 0; border-bottom: 1px solid var(--accent); text-align: center;}
+        .leaderboard-daily h3 { font-size: 30; color: var(--accent); margin: 0 0 10px 0; border-bottom: 1px solid var(--accent); text-align: center;}
         .leaderboard-daily ol { padding-left: 20px; margin: 0; color: var(--cyan); font-size: 0.8rem; line-height: 1.5; }
 
         /* --- Panel Lateral Derecho: Stats (Corregido a Horizontal) --- */
@@ -190,6 +193,7 @@
             display: flex; flex-direction: column; align-items: center; gap: 15px; 
             transform: scale(1); 
             transition: transform 0.3s ease;
+            counter-reset: rank;
         }
         
 
@@ -279,6 +283,18 @@
             position: absolute; bottom: 10px; right: 10px;
             font-size: 0.6rem; color: rgba(255,255,255,0.2); font-family: monospace;
         }
+        .logo-container {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        margin-bottom: 15px;
+}
+
+    .logo-container img {
+        width: 80px; /* Ajusta según el tamaño de tu logo transparente */
+        height: auto;
+        filter: drop-shadow(0 0 10px rgba(230, 57, 70, 0.4));
+}
     </style>
 </head>
 <body>
@@ -296,6 +312,9 @@
     </div>
 
     <div class="leaderboard-daily">
+        <div class="logo-container">
+            <img src="Logo_web.png" alt="Pokemon Pyramid Logo">
+        </div>
         <h3>🏆 Mejores Hoy</h3>
         <ol id="daily-list"><li>Cargando...</li></ol>
     </div>
@@ -308,7 +327,7 @@
     </div>
 
     <div class="main-game-container">
-        <h1>Pokémon Pyramid</h1>
+        <h1>Pokemon Pyramid</h1>
         <div id="categoria-texto">Cargando desafío...</div>
 
         <div class="pyramid">
@@ -347,21 +366,48 @@
         let intentos = 3;
         let juegoTerminado = false;
         let authMode = 'login';
+        
+async function inicializar() {
+    const user = localStorage.getItem('username');
+    const ultimaPartida = localStorage.getItem('ultima_partida');
+    const hoy = new Date().toDateString(); // Definimos 'hoy'
 
-        async function inicializar() {
-            const user = localStorage.getItem('username');
-            if (user) {
-                document.getElementById('streak-ui').style.visibility = 'visible';
-                document.getElementById('streak-val').innerText = localStorage.getItem('racha') || 0;
-                document.getElementById('auth-section').innerHTML = `
-                    <span style="font-size:0.8rem; color:#aaa;">Hola, <b>${user}</b></span>
-                    <button class="auth-btn" onclick="logout()" style="margin-left:10px;">Salir</button>
-                `;
-            }
-            await cargarTorre();
-            await cargarLeaderboard();
-            startTimer();
+    // 1. Verificación de partida diaria
+    if (ultimaPartida === hoy) {
+        console.log("Ya has jugado hoy");
+        document.body.innerHTML = `
+            <div style="text-align:center; margin-top:100px; color:white; font-family:sans-serif;">
+                <h1>¡Vuelve mañana!</h1>
+                <p>Ya has completado tu desafío diario de Pokémon Pyramid.</p>
+                <button onclick="localStorage.clear(); location.reload();" style="margin-top:20px; padding:10px; cursor:pointer;">
+                    DEBUG: Borrar rastro (Solo para pruebas)
+                </button>
+            </div>`;
+        return; // Detenemos la ejecución aquí
+    }
+
+    // 2. Configuración de la interfaz de usuario si hay login
+    if (user) {
+        const streakUI = document.getElementById('streak-ui');
+        if (streakUI) streakUI.style.visibility = 'visible';
+        
+        const streakVal = document.getElementById('streak-val');
+        if (streakVal) streakVal.innerText = localStorage.getItem('racha') || 0;
+
+        const authSection = document.getElementById('auth-section');
+        if (authSection) {
+            authSection.innerHTML = `
+                <span style="font-size:0.8rem; color:#aaa;">Hola, <b>${user}</b></span>
+                <button class="auth-btn" onclick="logout()" style="margin-left:10px;">Salir</button>
+            `;
         }
+    }
+
+    // 3. Llamadas a la API y arranque del cronómetro
+    await cargarTorre();
+    await cargarLeaderboard();
+    startTimer();
+}
 
         function startTimer() {
             startTime = Date.now();
@@ -441,6 +487,7 @@
             window.scrollTo(0,0)
             juegoTerminado = true;
             clearInterval(timerInterval);
+            localStorage.setItem('ultima_partida', new Date().toDateString());
             document.getElementById('btn-verificar').disabled = true;
             document.getElementById('mensaje').innerHTML = `<span style="color:${victoria?'#80ffdb':'#ff4d6d'}">${texto}</span>`;
             
@@ -462,7 +509,7 @@
                 }
             });
 
-            if (victoria) setTimeout(() => location.reload(), 6000);
+            if (victoria) setTimeout(() => cargarLeaderboard, 6000);
         }
 
         // --- Función Actualizada para Corazones Horizontales ---
@@ -487,20 +534,48 @@
         }
 
         async function procesarAuth() {
-            const u = document.getElementById('auth-user').value;
-            const p = document.getElementById('auth-pass').value;
-            const e = document.getElementById('auth-email').value;
-            const path = authMode === 'login' ? '/login' : '/register';
-            try {
-                const res = await fetch(`${API_URL}${path}?username=${u}&password=${p}&email=${e}`, { method: 'POST' });
-                const data = await res.json();
-                if (data.status === "success") {
-                    localStorage.setItem('username', u);
-                    if (data.racha !== undefined) localStorage.setItem('racha', data.racha);
-                    location.reload();
-                } else { alert("Error: " + data.message); }
-            } catch(err) { alert("Error."); }
+    const u = document.getElementById('auth-user').value;
+    const p = document.getElementById('auth-pass').value;
+    const e = document.getElementById('auth-email').value;
+    
+    // Determinamos la ruta según la pestaña activa
+    const path = authMode === 'login' ? '/login' : '/register';
+    
+    // Preparamos el cuerpo del JSON para FastAPI
+    const payload = {
+        username: u,
+        password: p,
+        email: e || null
+    };
+
+    try {
+        const res = await fetch(`${API_URL}${path}`, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        const data = await res.json();
+
+        if (data.status === "success") {
+            // Guardamos los datos en el navegador
+            localStorage.setItem('username', u);
+            
+            // Si el backend devuelve la racha (en el login), la guardamos
+            if (data.racha !== undefined) {
+                localStorage.setItem('racha', data.racha);
+            }
+            
+            closeModal();
+            location.reload(); // Recargamos para que inicializar() dibuje la interfaz de usuario logueado
+        } else { 
+            alert("Error: " + (data.detail || data.message || "Credenciales incorrectas")); 
         }
+    } catch(err) { 
+        console.error(err);
+        alert("Error de conexión con el servidor."); 
+    }
+}
 
         async function cargarLeaderboard() {
             try {

@@ -58,10 +58,15 @@ def obtener_configuracion_hoy():
     semilla = int(hoy.strftime("%Y%m%d"))
     
     categorias_disp = list(Categoria)
-    print(categorias_disp)
     categoria = categorias_disp[semilla % len(categorias_disp)]
     
     return semilla, categoria
+
+@app.get("/pokemon_difuminado")
+def get_pokemon_difuminado(id: int):
+    semilla, _ = obtener_configuracion_hoy()
+    poke = df.sample(1, random_state=semilla+1)
+    return 
 
 @app.get("/get-tower", response_model=TowerChallenge)
 def get_tower():

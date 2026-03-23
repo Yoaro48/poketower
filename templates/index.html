@@ -17,20 +17,53 @@
             --fire-core: #ffcb05;
         }
 
-        body { 
-            font-family: 'Segoe UI', sans-serif; 
-            background: var(--bg-color); 
-            color: var(--text-main); 
-            display: flex; 
-            justify-content: center;
-            align-items: center;
-            height: 100vh; 
-            margin: 0;
-            padding: 0;
-            overflow: hidden; 
-            counter-reset: rank; 
-            position: relative;
+    /* ... (resto del CSS igual) ... */
+
+    body { 
+        font-family: 'Segoe UI', sans-serif; 
+        background: var(--bg-color); 
+        color: var(--text-main); 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        /* Cambiamos el padding-top para que no se corte el título */
+        padding: 40px 20px 10px 20px; 
+        margin: 0;
+        height: 100vh;
+        box-sizing: border-box; /* Importante para que el padding no sume al alto */
+        overflow: hidden;
+        
+    }
+
+    h1 { 
+        margin: 0 0 5px 0; 
+        text-shadow: 2px 2px var(--accent); 
+        font-size: 2.2rem; 
+        line-height: 1.2;
+    }
+
+    /* Media query equilibrada para tu portátil */
+    @media (max-height: 850px) {
+        body { padding-top: 35px; } /* Un poco menos en pantallas pequeñas pero sin salir del margen */
+        
+        h1 { font-size: 1.8rem; }
+        
+        .pokemon-card {
+            width: 90px !important;
+            height: 120px !important;
         }
+        
+        .pokemon-card img {
+            width: 60px !important;
+            height: 60px !important;
+        }
+
+        .row { min-height: 120px !important; gap: 10px !important; }
+        .pyramid { gap: 5px !important; }
+        
+        #btn-verificar { margin-top: 10px !important; }
+    }
+
 
         body::before {
             content: ''; position: absolute; width: 100%; height: 100%;
@@ -151,7 +184,6 @@
             height: 90vh; 
         }
 
-        h1 { margin: 0 0 5px 0; text-shadow: 2px 2px var(--accent); font-size: 2.2rem; }
         #categoria-texto { color: var(--cyan); font-size: 1.1em; margin-bottom: 15px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;}
 
         .pyramid { 
@@ -160,12 +192,17 @@
             transition: transform 0.3s ease;
         }
         
-        @media (max-height: 800px) {
-            .pyramid { transform: scale(0.85); margin-top: -30px; }
-            h1 { font-size: 1.8rem; }
-        }
 
-        .row { display: flex; justify-content: center; gap: 10px; min-height: 130px; }
+        /* Modifica la fila para que no tenga altura mínima obligatoria */
+    .row { 
+    display: flex; 
+    justify-content: center; 
+    gap: 15px; 
+    /* Elimina o comenta el min-height: 130px; */
+    min-height: auto; 
+}
+
+/* Asegura que la imagen no desborde la carta */
 
         .pokemon-card {
             background: var(--card-bg); color: var(--text-dark);
@@ -210,7 +247,21 @@
         #btn-verificar:hover { transform: scale(1.05); background: #ff4d6d; }
         #btn-verificar:disabled { background: #555; cursor: not-allowed; transform: none; box-shadow: none;}
 
-        #mensaje { margin-top: 10px; font-weight: bold; height: 20px; text-align: center; font-size: 0.9rem;}
+        html {
+    scroll-behavior: smooth;
+    /* Evita que el scroll automático se dispare al cambiar el DOM */
+    overflow: hidden; 
+}
+
+#mensaje {
+    margin-top: 10px;
+    font-weight: bold;
+    min-height: 40px; /* Reservamos el espacio de antemano */
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
         .modal {
             display: none; position: fixed; z-index: 2000;
@@ -387,6 +438,7 @@
         }
 
         function finalizarJuego(victoria, texto, info) {
+            window.scrollTo(0,0)
             juegoTerminado = true;
             clearInterval(timerInterval);
             document.getElementById('btn-verificar').disabled = true;

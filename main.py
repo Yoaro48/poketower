@@ -68,7 +68,7 @@ def get_pokemon_difuminado(id: int):
     poke = df.sample(1, random_state=semilla+1)
     return 
 
-@app.get("/get-tower", response_model=TowerChallenge)
+@app.get("/get_tower", response_model=TowerChallenge)
 def get_tower():
     # 1. Cogemos 5 al azar con Pandas
     semilla, categoria = obtener_configuracion_hoy()
@@ -224,3 +224,13 @@ def login(UserAuth: UserAuth):
     if user and pwd_context.verify(password_truncated, user[0]):
         return {"status": "success", "racha": user[1], "ultima": user[2]}
     return {"status": "error", "message": "Credenciales inválidas"}
+
+@app.post("get_streak")
+def get_streak(username: str):
+    conn = sqlite3.connect('usuarios.db')
+    c = conn.cursor()
+    c.execute("SELECT racha_actual FROM perfiles WHERE username=?", (username,))
+    racha = c.fetchone()
+    if racha:
+        return {"status": "success", "racha": racha[0]}
+    return {"status": "error", "message": "Usuario no encontrado"}

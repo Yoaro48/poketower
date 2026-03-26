@@ -47,25 +47,40 @@ body {
 
     /* Media query equilibrada para tu portátil */
     @media (max-height: 850px) {
-        body { padding-top: 50px; } /* Un poco menos en pantallas pequeñas pero sin salir del margen */
-        
-        h1 { font-size: 1.8rem; }
-        
-        .pokemon-card {
-            width: 90px !important;
-            height: 120px !important;
-        }
-        
-        .pokemon-card img {
-            width: 60px !important;
-            height: 60px !important;
-        }
-
-        .row { min-height: 120px !important; gap: 10px !important; }
-        .pyramid { gap: 5px !important; }
-        
-        #btn-verificar { margin-top: 10px !important; }
+    body { 
+        padding-top: 20px !important; /* Subimos todo para ganar espacio abajo */
     }
+    
+    h1 { 
+        font-size: 1.5rem !important; 
+        margin-bottom: 5px !important; 
+    }
+
+    #categoria-texto { 
+        margin-bottom: 15px !important; /* En portátil reducimos este espacio */
+        font-size: 0.9rem !important;
+    }
+
+    .pyramid { 
+        gap: 8px !important; 
+        transform: scale(0.9); /* Encogemos la pirámide un 10% para que quepa el mensaje */
+    }
+
+    .pokemon-card {
+        width: 85px !important;
+        height: 110px !important;
+    }
+
+    #btn-verificar {
+        margin-top: 20px !important;
+        padding: 8px 30px !important;
+    }
+
+    #mensaje {
+        margin-top: 5px !important;
+        font-size: 0.9rem !important;
+    }
+}
 
 
         body::before {
@@ -184,10 +199,10 @@ body {
             align-items: center;
             justify-content: center;
             max-width: 800px;
-            height: 90vh; 
+            height: 95vh; 
         }
 
-        #categoria-texto { color: var(--cyan); font-size: 1.1em; margin-bottom: 15px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;}
+        #categoria-texto { color: var(--cyan); font-size: 1.1em; margin-bottom: 35px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;}
 
         .pyramid { 
             display: flex; flex-direction: column; align-items: center; gap: 15px; 
@@ -229,6 +244,12 @@ body {
             z-index: 3;
         }
 
+        .card-fixed {
+        cursor: default !important;
+        pointer-events: none; /* Evita que SortableJS la tome como objetivo */
+        opacity: 1;
+}
+
         .pokemon-card img { width: 75px; height: 75px; pointer-events: none; }
         .pokemon-card span { font-size: 0.8rem; font-weight: bold; text-transform: capitalize; padding: 0 5px; text-align: center;}
         .pokemon-card .info-extra { font-size: 0.75rem; color: var(--accent); font-weight: bold; margin-top: 2px; }
@@ -236,6 +257,11 @@ body {
         .card-correct { border-color: #2ecc71 !important; box-shadow: 0 0 15px rgba(46, 204, 113, 0.5) !important; }
         .card-error { animation: shake 0.4s; border-color: #e74c3c !important;}
 
+        /* Cuando la carta tiene la clase card-correct, cambiamos el fondo del número (::after) */
+        .pokemon-card.card-correct::after {
+        background: #2ecc71 !important; /* El mismo verde del borde */
+        border-color: var(--card-bg);
+}
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
             25% { transform: translateX(-5px); }
@@ -243,7 +269,7 @@ body {
         }
 
         #btn-verificar {
-            margin-top: 20px; padding: 12px 40px; border-radius: 40px;
+            margin-top: 45px; padding: 12px 40px; border-radius: 40px;
             background: var(--accent); color: white; border: none;
             font-weight: bold; cursor: pointer; font-size: 1.1rem; transition: 0.2s;
             box-shadow: 0 4px 10px rgba(230, 57, 70, 0.3);
@@ -260,7 +286,7 @@ body {
 #mensaje {
     margin-top: 10px;
     font-weight: bold;
-    min-height: 40px; /* Reservamos el espacio de antemano */
+    min-height: 50px; /* Reservamos el espacio de antemano */
     text-align: center;
     display: flex;
     align-items: center;
@@ -392,7 +418,12 @@ async function inicializar() {
         if (streakUI) streakUI.style.visibility = 'visible';
         
         const streakVal = document.getElementById('streak-val');
-        if (streakVal) streakVal.innerText = localStorage.getItem('racha') || 0;
+        const res = await fetch(`${API_URL}/get_streak`)
+        const racha_res = res.json()
+        const racha = racha_res["status"] == "success" ? racha_res["racha"] : 0
+
+
+        if (streakVal) streakVal.innerText = racha;
 
         const authSection = document.getElementById('auth-section');
         if (authSection) {
@@ -419,7 +450,7 @@ async function inicializar() {
 
         async function cargarTorre() {
             try {
-                const res = await fetch(`${API_URL}/get-tower`);
+                const res = await fetch(`${API_URL}/get_tower`);
                 const data = await res.json();
                 document.getElementById('categoria-texto').innerText = `ORDENA POR: ${data.categoria_reto}`;
                 
@@ -462,6 +493,8 @@ async function inicializar() {
                     cards.forEach((card, index) => {
                         if (data.aciertos[index]) {
                             card.classList.add('card-correct');
+                            card.classList.add('card-fixed'); // Bloquea la carta
+
                         } else {
                             card.classList.add('card-error'); 
                         }
@@ -487,6 +520,15 @@ async function inicializar() {
             window.scrollTo(0,0)
             juegoTerminado = true;
             clearInterval(timerInterval);
+
+            ['fila-1', 'fila-2', 'fila-3', 'fila-4'].forEach(id => {
+                const el = document.getElementById(id);
+                const sortableInst = Sortable.get(el);
+            if (sortableInst) {
+                sortableInst.option("disabled", true); // Deshabilita el arrastre
+            }
+            });
+
             localStorage.setItem('ultima_partida', new Date().toDateString());
             document.getElementById('btn-verificar').disabled = true;
             document.getElementById('mensaje').innerHTML = `<span style="color:${victoria?'#80ffdb':'#ff4d6d'}">${texto}</span>`;

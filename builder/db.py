@@ -5,7 +5,7 @@ def create_db():
     conn.execute("PRAGMA foreign_keys = ON")
     # Tabla de perfiles
     try:
-        with open("createdb.sql", "r") as f:
+        with open("./builder/createdb.sql", "r") as f:
 
             c.executescript(f.read())
 

@@ -1,16 +1,16 @@
 -- Tabla de perfiles
+DROP TABLE IF EXISTS tiempos;
 DROP TABLE IF EXISTS perfiles;
 CREATE TABLE IF NOT EXISTS perfiles (
     username TEXT PRIMARY KEY, 
     password_hash TEXT NOT NULL, 
     racha_actual INTEGER DEFAULT 0 CHECK(racha_actual >= 0), 
     ultima_fecha_jugada TEXT, -- Usamos TEXT para fechas en formato ISO (YYYY-MM-DD)
-    mejor_racha INTEGER DEFAULT 0 CHECK(mejor_racha >= 0),
-    email TEXT UNIQUE NOT NULL
+    mejor_racha INTEGER DEFAULT 0 CHECK(mejor_racha >= 0)
 );
 
 -- Tabla de tiempos
-DROP TABLE IF EXISTS tiempos;
+
 CREATE TABLE IF NOT EXISTS tiempos (
     username TEXT, 
     completado INTEGER DEFAULT 0 CHECK (completado IN (0, 1)), -- SQLite no tiene BOOLEAN real, usa 0/1

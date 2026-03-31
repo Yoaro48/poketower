@@ -16,7 +16,6 @@ if not hasattr(bcrypt, "__about__"):
 class UserAuth(BaseModel):
     username: str
     password: str = None
-    email: Optional[str] 
 
 class Categoria(str, Enum):
     peso = "weight"
@@ -182,8 +181,8 @@ def register(UserAuth: UserAuth):
     try:
         username = UserAuth.username
         password = UserAuth.password
-        email = UserAuth.email
-        print("Recibido registro para:", username, email, password)
+
+        print("Recibido registro para:", username, password)
 
         password_bytes = password.encode('utf-8')
 
@@ -200,7 +199,7 @@ def register(UserAuth: UserAuth):
     try:
         conn = sqlite3.connect('usuarios.db')
         c = conn.cursor()
-        c.execute("INSERT INTO perfiles (username, password_hash, email) VALUES (?, ?, ?)", (username, hashed, email))
+        c.execute("INSERT INTO perfiles (username, password_hash) VALUES (?, ?)", (username, hashed))
         conn.commit()
         return {"status": "success"}
     
@@ -225,7 +224,7 @@ def login(UserAuth: UserAuth):
         return {"status": "success", "racha": user[1], "ultima": user[2]}
     return {"status": "error", "message": "Credenciales inválidas"}
 
-@app.post("get_streak")
+@app.get("get_streak")
 def get_streak(username: str):
     conn = sqlite3.connect('usuarios.db')
     c = conn.cursor()

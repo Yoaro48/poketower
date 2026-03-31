@@ -80,6 +80,17 @@ body {
         margin-top: 5px !important;
         font-size: 0.9rem !important;
     }
+    .pizza-text {
+        display: none;
+    }
+    .pizza-btn {
+        padding: 6px 8px; /* Solo dejamos el emoji de la pizza */
+        font-size: 1.1rem;
+    }
+    .donation-corner {
+        top: 22px; /* Alineación fina en portátil */
+        left: 105px; /* Ajustamos un pelín el margen en pantallas pequeñas */
+    }
 }
 
 
@@ -98,6 +109,15 @@ body {
             align-items: center;
             gap: 15px;
             visibility: hidden; 
+            z-index: 10;
+        }
+
+
+/* Posición fija para la pizza (un poco más a la derecha para no tapar la racha) */
+        .donation-corner {
+            position: absolute;
+            top: 25px; /* Alineado a la misma altura */
+            left: 120px; /* Desplazado a la derecha para dejar espacio al fueguito */
             z-index: 10;
         }
 
@@ -129,6 +149,34 @@ body {
             opacity: 0.8;
             z-index: 1;
         }
+        .pizza-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Más espacio entre emoji y texto */
+    background: rgba(255, 255, 255, 0.12); /* Ligeramente más opaco */
+    color: #f1faee;
+    text-decoration: none;
+    
+    /* === CAMBIOS DE TAMAÑO AQUÍ === */
+    padding: 10px 20px; /* Aumentamos el relleno (antes 6px 12px) */
+    border-radius: 25px; /* Bordes más redondeados acorde al tamaño */
+    font-size: 1rem; /* Fuente más grande (antes 0.85rem) */
+    /* ============================= */
+    
+    font-weight: bold;
+    border: 1.5px solid rgba(255, 255, 255, 0.25); /* Borde más definido */
+    backdrop-filter: blur(5px);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* Sombra base para dar volumen */
+}
+
+/* --- Efecto Hover (MÁS DINÁMICO) --- */
+.pizza-btn:hover {
+    background: #e63946; /* El rojo acento */
+    border-color: #e63946;
+    transform: translateY(-3px) scale(1.02); /* Sube un poco más y se agranda ligeramente */
+    box-shadow: 0 6px 20px rgba(230, 57, 70, 0.4); /* Sombra más intensa */
+}
 
         @keyframes flamePulse {
             0%, 100% { transform: scale(1); opacity: 0.7; box-shadow: 0 0 10px var(--fire-color); }
@@ -141,7 +189,7 @@ body {
         .auth-corner {
             position: absolute;
             top: 20px;
-            right: 20px;
+            right: 40px;
             display: flex; gap: 10px; align-items: center;
             z-index: 10;
         }
@@ -321,6 +369,44 @@ body {
         height: auto;
         filter: drop-shadow(0 0 10px rgba(230, 57, 70, 0.4));
 }
+/* Estilo base para los banners laterales */
+.ad-banner {
+    position: absolute;
+    top: 300px; /* Se colocan debajo de tus paneles actuales */
+    width: 160px;
+    height: 600px; /* Tamaño clásico de rascacielos para anuncios */
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+}
+
+.ad-left {
+    left: 40px; /* Alineado con tu leaderboard expandido */
+}
+
+.ad-right {
+    right: 40px; /* Alineado con tu panel de stats expandido */
+}
+
+/* Anuncio pequeño abajo a la izquierda */
+.ad-small-bottom {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    width: 200px;
+    height: 90px; /* Tamaño banner pequeño de móvil/lateral */
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    z-index: 5;
+}
+
     </style>
 </head>
 <body>
@@ -331,7 +417,13 @@ body {
             <div class="pokeball-streak"></div>
         </div>
         <span id="streak-val">0</span>
-    </div>
+</div>
+
+<div class="donation-corner">
+    <a href="https://buymeacoffee.com/poketower" target="_blank" class="pizza-btn" title="¡Invítame a una pizza!">
+        🍕 <span class="pizza-text">Buy me a pizza</span>
+    </a>
+</div>
 
     <div class="auth-corner" id="auth-section">
         <button class="auth-btn" onclick="openModal()">Log In / Registro</button>
@@ -346,15 +438,15 @@ body {
     </div>
 
     <div class="stats-panel-right">
-        <div class="stats-label">Tiempo</div>
+        <div class="stats-label">Time</div>
         <div id="timer">00.0s</div>
-        <div class="stats-label">Vidas</div>
+        <div class="stats-label">Lifes</div>
         <div id="corazones">❤️❤️❤️</div>
     </div>
 
     <div class="main-game-container">
         <h1>Pokemon Pyramid</h1>
-        <div id="categoria-texto">Cargando desafío...</div>
+        <div id="categoria-texto">Loading challenge...</div>
 
         <div class="pyramid">
             <div class="row" id="fila-1"></div>
@@ -363,18 +455,17 @@ body {
             <div class="row" id="fila-4"></div>
         </div>
 
-        <button id="btn-verificar" onclick="verificar()">COMPROBAR ORDEN</button>
+        <button id="btn-verificar" onclick="verificar()">CHECK ORDER</button>
         <div id="mensaje"></div>
     </div>
 
     <div id="authModal" class="modal">
         <div class="modal-content">
             <div style="margin-bottom: 20px;">
-                <button class="tab-btn active" id="tabLogin" onclick="switchTab('login')">Entrar</button>
-                <button class="tab-btn" id="tabReg" onclick="switchTab('reg')">Registro</button>
+                <button class="tab-btn active" id="tabLogin" onclick="switchTab('login')">Log in</button>
+                <button class="tab-btn" id="tabReg" onclick="switchTab('reg')">Register</button>
             </div>
             <input type="text" id="auth-user" placeholder="Usuario">
-            <input type="email" id="auth-email" placeholder="Email" style="display:none;">
             <input type="password" id="auth-pass" placeholder="Contraseña">
             <button class="auth-btn primary" onclick="procesarAuth()" style="width:100%; margin-top:20px; padding: 12px;">Enviar</button>
             <button class="auth-btn" onclick="closeModal()" style="border:none; margin-top:15px; font-size: 0.8rem;">Cerrar</button>
@@ -384,6 +475,18 @@ body {
     <a class="made-by" href="https://github.com/Yoaro48" target="_blank" rel="noopener">
         Made by Yoaro48
     </a>
+
+    <div class="ad-banner ad-left">
+    <span style="color: #555; font-size: 0.8rem;">Anuncio</span>
+</div>
+
+<div class="ad-banner ad-right">
+    <span style="color: #555; font-size: 0.8rem;">Anuncio</span>
+</div>
+
+<div class="ad-small-bottom">
+    <span style="color: #555; font-size: 0.8rem;">Anuncio</span>
+</div>
 
     <script>
         const API_URL = "http://localhost:8000";
@@ -403,8 +506,8 @@ async function inicializar() {
         console.log("Ya has jugado hoy");
         document.body.innerHTML = `
             <div style="text-align:center; margin-top:100px; color:white; font-family:sans-serif;">
-                <h1>¡Vuelve mañana!</h1>
-                <p>Ya has completado tu desafío diario de Pokémon Pyramid.</p>
+                <h1>¡Come back tomorrow!</h1>
+                <p>You have already completed todays Pokemon Pyramid challenge.</p>
                 <button onclick="localStorage.clear(); location.reload();" style="margin-top:20px; padding:10px; cursor:pointer;">
                     DEBUG: Borrar rastro (Solo para pruebas)
                 </button>
@@ -452,7 +555,7 @@ async function inicializar() {
             try {
                 const res = await fetch(`${API_URL}/get_tower`);
                 const data = await res.json();
-                document.getElementById('categoria-texto').innerText = `ORDENA POR: ${data.categoria_reto}`;
+                document.getElementById('categoria-texto').innerText = `ORDER BY: ${data.categoria_reto}`;
                 
                 const rows = ['fila-1', 'fila-2', 'fila-3', 'fila-4'];
                 let idx = 0;
@@ -570,7 +673,6 @@ async function inicializar() {
         function closeModal() { document.getElementById('authModal').style.display = 'none'; }
         function switchTab(m) {
             authMode = m;
-            document.getElementById('auth-email').style.display = m==='reg' ? 'block' : 'none';
             document.getElementById('tabLogin').className = m==='login' ? 'tab-btn active' : 'tab-btn';
             document.getElementById('tabReg').className = m==='reg' ? 'tab-btn active' : 'tab-btn';
         }
@@ -578,7 +680,6 @@ async function inicializar() {
         async function procesarAuth() {
     const u = document.getElementById('auth-user').value;
     const p = document.getElementById('auth-pass').value;
-    const e = document.getElementById('auth-email').value;
     
     // Determinamos la ruta según la pestaña activa
     const path = authMode === 'login' ? '/login' : '/register';
@@ -587,7 +688,6 @@ async function inicializar() {
     const payload = {
         username: u,
         password: p,
-        email: e || null
     };
 
     try {

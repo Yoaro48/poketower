@@ -503,17 +503,35 @@ async function inicializar() {
 
     // 1. Verificación de partida diaria
     if (ultimaPartida === hoy) {
-        console.log("Ya has jugado hoy");
-        document.body.innerHTML = `
-            <div style="text-align:center; margin-top:100px; color:white; font-family:sans-serif;">
-                <h1>¡Come back tomorrow!</h1>
-                <p>You have already completed todays Pokemon Pyramid challenge.</p>
-                <button onclick="localStorage.clear(); location.reload();" style="margin-top:20px; padding:10px; cursor:pointer;">
-                    DEBUG: Borrar rastro (Solo para pruebas)
-                </button>
-            </div>`;
-        return; // Detenemos la ejecución aquí
+    console.log("Ya has jugado hoy");
+
+    // Definimos el HTML de la pantalla de espera
+    let mensajeHTML = `
+        <div style="text-align:center; margin-top:100px; color:white; font-family:sans-serif;">
+            <h1>¡Come back tomorrow!</h1>
+            <p>You have already completed todays Pokemon Pyramid challenge.</p>
+            <div id="debug-container"></div>
+        </div>`;
+
+    document.body.innerHTML = mensajeHTML;
+
+    // Si el usuario es el administrador, insertamos el botón en el contenedor que acabamos de crear
+    if (user === "Yoaro48") {
+        const debugBtn = document.createElement('button');
+        debugBtn.innerText = "DEBUG: Borrar rastro (Solo para pruebas)";
+        debugBtn.style.cssText = "margin-top:20px; padding:10px; cursor:pointer; background: #444; color: white; border: none; border-radius: 5px;";
+        
+        debugBtn.onclick = () => {
+            localStorage.clear();
+            location.reload();
+        };
+
+        const container = document.getElementById('debug-container');
+        if (container) container.appendChild(debugBtn);
     }
+    
+    return; // Detenemos la ejecución
+}
 
     // 2. Configuración de la interfaz de usuario si hay login
     if (user) {

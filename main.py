@@ -10,6 +10,8 @@ import sqlite3
 from passlib.context import CryptContext
 import bcrypt
 
+import os
+
 if not hasattr(bcrypt, "__about__"):
     bcrypt.__about__ = type("About", (object,), {"__version__": bcrypt.__version__})
 
@@ -51,6 +53,17 @@ app.add_middleware(
 df = pd.read_csv("pokemon.csv")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Cambia esto en tu main.py
+def get_db():
+    # Usamos /app/data/ porque es donde montamos el volumen
+    db_path = "/app/data/usuarios.db" 
+    # Si estás probando en tu PC local, usa la ruta normal
+    if not os.path.exists("/app/data"):
+        db_path = "usuarios.db"
+    
+    conn = sqlite3.connect(db_path)
+    return conn
 
 def obtener_configuracion_hoy():
     hoy = date.today()
@@ -137,7 +150,7 @@ def verify_order(user_order: List[str], tiempo: float, username: str = None):
     
 @app.get("/leaderboard_racha")
 def get_leaderboard_racha():
-    conn = sqlite3.connect('usuarios.db')
+    conn = get_db()
     cursor = conn.cursor()
     racha = cursor.execute
     ('SELECT username, mejor_racha '
@@ -148,7 +161,7 @@ def get_leaderboard_racha():
 
 @app.get("/leaderboard_tiempo")
 def get_leaderboard_tiempo():
-    conn = sqlite3.connect('usuarios.db')
+    conn = get_db()
     cursor = conn.cursor()
     tiempo = cursor.execute(
         'SELECT username, tiempo '
@@ -163,7 +176,7 @@ def submit_result(tiempo: float, completado: bool,username: str = None):
     if not username or username.strip() == "" or username.lower() == "null":
         return {"message": "Jugador anonimo, resultado no guardado"}
     
-    conn = sqlite3.connect('usuarios.db')
+    conn = get_db()
     cursor = conn.cursor()
     
     # La racha se actualiza mediante un trigger en la base de datos, así que aquí solo insertamos el resultado
@@ -197,7 +210,7 @@ def register(UserAuth: UserAuth):
     
 
     try:
-        conn = sqlite3.connect('usuarios.db')
+        conn = get_db()
         c = conn.cursor()
         c.execute("INSERT INTO perfiles (username, password_hash) VALUES (?, ?)", (username, hashed))
         conn.commit()
@@ -209,7 +222,7 @@ def register(UserAuth: UserAuth):
 
 @app.post("/login")
 def login(UserAuth: UserAuth):
-    conn = sqlite3.connect('usuarios.db')
+    conn = get_db()
     c = conn.cursor()
     username = UserAuth.username
     password = UserAuth.password
@@ -226,10 +239,15 @@ def login(UserAuth: UserAuth):
 
 @app.get("get_streak")
 def get_streak(username: str):
-    conn = sqlite3.connect('usuarios.db')
+    conn = get_db()
     c = conn.cursor()
     c.execute("SELECT racha_actual FROM perfiles WHERE username=?", (username,))
     racha = c.fetchone()
     if racha:
         return {"status": "success", "racha": racha[0]}
     return {"status": "error", "message": "Usuario no encontrado"}
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

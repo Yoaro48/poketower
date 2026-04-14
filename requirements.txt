@@ -4,3 +4,5 @@ pydantic
 passlib[bcrypt]
 python-multipart
 pandas
+bcrypt
+passlib

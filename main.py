@@ -1,7 +1,5 @@
-from email.mime import base
-from typing import Optional
+
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from pydantic import BaseModel
 from typing import List
 from enum import Enum
@@ -34,10 +32,8 @@ class TowerChallenge(BaseModel):
     categoria_reto: Categoria
     pokemon_list: list[PokemonSimplificado]
 
-from fastapi import FastAPI
 import pandas as pd
 import random
-import uuid
 
 app = FastAPI()
 
@@ -152,10 +148,9 @@ def verify_order(user_order: List[str], tiempo: float, username: str = None):
 def get_leaderboard_racha():
     conn = get_db()
     cursor = conn.cursor()
-    racha = cursor.execute
-    ('SELECT username, mejor_racha '
-    'FROM perfiles '
-    'ORDER BY mejor_racha DESC').fetchmany(5)
+    # Todo el comando debe ir dentro del execute
+    cursor.execute('SELECT username, mejor_racha FROM perfiles ORDER BY mejor_racha DESC')
+    racha = cursor.fetchmany(5)
     conn.close()
     return [{"username": row[0], "racha_actual": row[1]} for row in racha]
 
@@ -214,6 +209,7 @@ def register(UserAuth: UserAuth):
         c = conn.cursor()
         c.execute("INSERT INTO perfiles (username, password_hash) VALUES (?, ?)", (username, hashed))
         conn.commit()
+        conn.close()
         return {"status": "success"}
     
     except Exception as e:

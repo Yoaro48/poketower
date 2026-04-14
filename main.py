@@ -233,7 +233,7 @@ def login(UserAuth: UserAuth):
         return {"status": "success", "racha": user[1], "ultima": user[2]}
     return {"status": "error", "message": "Credenciales inválidas"}
 
-@app.get("get_streak")
+@app.get("/get_streak")
 def get_streak(username: str):
     conn = get_db()
     c = conn.cursor()

@@ -190,31 +190,32 @@ def register(UserAuth: UserAuth):
         username = UserAuth.username
         password = UserAuth.password
 
-        print("Recibido registro para:", username, password)
+        # Validamos que no llegue vacío
+        if not password:
+            raise HTTPException(status_code=400, detail="Contraseña requerida")
 
-        password_bytes = password.encode('utf-8')
+        print("Recibido registro para:", username)
 
-        # 2. Truncamos los primeros 72 BYTES
-        password_truncated = password_bytes[:72]  # Limitar a 72 caracteres para bcrypt
-        password_truncated = password_truncated.decode('latin-1')
-        hashed = pwd_context.hash(password_truncated)
+        # Truncamos a 72 BYTES y devolvemos a STRING
+        password_bytes = password.encode('utf-8')[:72]
+        password_string_truncada = password_bytes.decode('utf-8', 'ignore')
 
-    except Exception as e:
-        HTTPException(status_code=400, detail="Error al parsear la contraseña " + str(e))
-        return {"status": "error" ,"message": "Error al procesar la contraseña: " + str(e)}
-    
+        # Hasheamos el string
+        hashed = pwd_context.hash(password_string_truncada)
 
-    try:
         conn = get_db()
         c = conn.cursor()
         c.execute("INSERT INTO perfiles (username, password_hash) VALUES (?, ?)", (username, hashed))
         conn.commit()
         conn.close()
+        
         return {"status": "success"}
     
+    except sqlite3.IntegrityError:
+        return {"status": "error", "message": "El nombre de usuario ya existe"}
     except Exception as e:
-        HTTPException(status_code=400, detail="Error al registrar el usuario en la db: " + str(e))
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": "Error interno: " + str(e)}
+
 
 @app.post("/login")
 def login(UserAuth: UserAuth):
@@ -223,14 +224,18 @@ def login(UserAuth: UserAuth):
     username = UserAuth.username
     password = UserAuth.password
 
-
     c.execute("SELECT password_hash, racha_actual, ultima_fecha_jugada FROM perfiles WHERE username=?", (username,))
     user = c.fetchone()
+    conn.close() # Siempre cerramos conexión
 
-    password_truncated = password.encode("utf-8")[:72] # Limitar a 72 caracteres para bcrypt
+    # Truncamos la contraseña que viene del usuario igual que en el registro
+    password_bytes = password.encode('utf-8')[:72]
+    password_string_truncada = password_bytes.decode('utf-8', 'ignore')
     
-    if user and pwd_context.verify(password_truncated, user[0]):
+    # Comparamos el string truncado con el hash guardado
+    if user and pwd_context.verify(password_string_truncada, user[0]):
         return {"status": "success", "racha": user[1], "ultima": user[2]}
+    
     return {"status": "error", "message": "Credenciales inválidas"}
 
 @app.get("/get_streak")

@@ -1,7 +1,5 @@
 fastapi
 uvicorn
 python-multipart
-passlib
 passlib[bcrypt]
-bcrypt
 pandas

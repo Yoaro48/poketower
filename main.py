@@ -185,58 +185,47 @@ def submit_result(tiempo: float, completado: bool,username: str = None):
     return {"message": "Resultado guardado correctamente"}
 
 @app.post("/register")
-def register(UserAuth: UserAuth):
+def register(user_auth: UserAuth): # Cambiado a minúscula para evitar conflictos
     try:
-        username = UserAuth.username
-        password = UserAuth.password
+        if not user_auth.password:
+            return {"status": "error", "message": "Password required"}
 
-        # Validamos que no llegue vacío
-        if not password:
-            raise HTTPException(status_code=400, detail="Contraseña requerida")
-
-        print("Recibido registro para:", username)
-
-        # Truncamos a 72 BYTES y devolvemos a STRING
-        password_bytes = password.encode('utf-8')[:72]
-        password_string_truncada = password_bytes.decode('utf-8', 'ignore')
-
-        # Hasheamos el string
-        hashed = pwd_context.hash(password_string_truncada)
+        # Truncamos el string directamente ANTES de enviarlo a passlib
+        # Usamos los primeros 71 caracteres para estar 100% seguros con el límite de 72 bytes
+        password_segura = user_auth.password[:71]
+        
+        hashed = pwd_context.hash(password_segura)
 
         conn = get_db()
         c = conn.cursor()
-        c.execute("INSERT INTO perfiles (username, password_hash) VALUES (?, ?)", (username, hashed))
+        c.execute("INSERT INTO perfiles (username, password_hash) VALUES (?, ?)", 
+                  (user_auth.username, hashed))
         conn.commit()
         conn.close()
-        
         return {"status": "success"}
-    
-    except sqlite3.IntegrityError:
-        return {"status": "error", "message": "El nombre de usuario ya existe"}
     except Exception as e:
-        return {"status": "error", "message": "Error interno: " + str(e)}
-
+        # Esto atrapará el error de la imagen y nos dará más info si falla
+        return {"status": "error", "message": f"Error interno: {str(e)}"}
 
 @app.post("/login")
-def login(UserAuth: UserAuth):
-    conn = get_db()
-    c = conn.cursor()
-    username = UserAuth.username
-    password = UserAuth.password
+def login(user_auth: UserAuth):
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT password_hash, racha_actual, ultima_fecha_jugada FROM perfiles WHERE username=?", 
+                  (user_auth.username,))
+        user = c.fetchone()
+        conn.close()
 
-    c.execute("SELECT password_hash, racha_actual, ultima_fecha_jugada FROM perfiles WHERE username=?", (username,))
-    user = c.fetchone()
-    conn.close() # Siempre cerramos conexión
-
-    # Truncamos la contraseña que viene del usuario igual que en el registro
-    password_bytes = password.encode('utf-8')[:72]
-    password_string_truncada = password_bytes.decode('utf-8', 'ignore')
-    
-    # Comparamos el string truncado con el hash guardado
-    if user and pwd_context.verify(password_string_truncada, user[0]):
-        return {"status": "success", "racha": user[1], "ultima": user[2]}
-    
-    return {"status": "error", "message": "Credenciales inválidas"}
+        if user:
+            # Truncamos igual que en el registro
+            password_segura = user_auth.password[:71]
+            if pwd_context.verify(password_segura, user[0]):
+                return {"status": "success", "racha": user[1], "ultima": user[2]}
+        
+        return {"status": "error", "message": "Credenciales inválidas"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @app.get("/get_streak")
 def get_streak(username: str):

@@ -61,6 +61,29 @@ def get_db():
     conn = sqlite3.connect(db_path)
     return conn
 
+def inicializar_base_de_datos():
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Verificamos si la tabla 'perfiles' ya existe
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='perfiles'")
+    if not cursor.fetchone():
+        print("Base de datos vacía. Creando tablas desde createdb.sql...")
+        try:
+            # Asegúrate de que el archivo createdb.sql esté en la raíz de tu GitHub
+            with open("./builder/createdb.sql", "r", encoding="utf-8") as f:
+                sql_script = f.read()
+                cursor.executescript(sql_script)
+            conn.commit()
+            print("Tablas creadas con éxito.")
+        except Exception as e:
+            print(f"Error al leer createdb.sql: {e}")
+    
+    conn.close()
+
+# Llamamos a la función justo antes de que arranque la App
+inicializar_base_de_datos()
+
 def obtener_configuracion_hoy():
     hoy = date.today()
     semilla = int(hoy.strftime("%Y%m%d"))

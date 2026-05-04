@@ -15,7 +15,7 @@ if not hasattr(bcrypt, "__about__"):
 
 class UserAuth(BaseModel):
     username: str
-    password: str = None
+    password: str
 
 class Categoria(str, Enum):
     peso = "weight"

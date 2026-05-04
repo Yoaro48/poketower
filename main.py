@@ -48,7 +48,7 @@ app.add_middleware(
 
 df = pd.read_csv("pokemon.csv")
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__ident="2b")
 
 # Cambia esto en tu main.py
 def get_db():
@@ -210,16 +210,13 @@ def submit_result(tiempo: float, completado: bool,username: str = None):
     return {"message": "Resultado guardado correctamente"}
 
 @app.post("/register")
-def register(user_auth: UserAuth): # Cambiado a minúscula para evitar conflictos
+def register(user_auth: UserAuth):
     try:
         if not user_auth.password:
             return {"status": "error", "message": "Password required"}
 
-        # Truncamos el string directamente ANTES de enviarlo a passlib
-        # Usamos los primeros 71 caracteres para estar 100% seguros con el límite de 72 bytes
-        password_segura = user_auth.password[:71]
-        
-        hashed = pwd_context.hash(password_segura)
+        # Deja que passlib maneje la contraseña directamente
+        hashed = pwd_context.hash(user_auth.password)
 
         conn = get_db()
         c = conn.cursor()
@@ -229,8 +226,7 @@ def register(user_auth: UserAuth): # Cambiado a minúscula para evitar conflicto
         conn.close()
         return {"status": "success"}
     except Exception as e:
-        # Esto atrapará el error de la imagen y nos dará más info si falla
-        return {"status": "error", "message": f"Error interno: {str(e)}"}
+        return {"status": "error", "message": "Error interno: " + str(e)}
 
 @app.post("/login")
 def login(user_auth: UserAuth):

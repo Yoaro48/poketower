@@ -1,4 +1,4 @@
-
+import sys
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List
@@ -76,8 +76,10 @@ def inicializar_base_de_datos():
                 cursor.executescript(sql_script)
             conn.commit()
             print("Tablas creadas con éxito.")
+            sys.stdout.flush()
         except Exception as e:
             print(f"Error al leer createdb.sql: {e}")
+            sys.stdout.flush()
     
     conn.close()
 
